@@ -70,7 +70,7 @@ func ParseRange(rangeStr string) (*Pagination, error) {
 
 func (p *Pagination) ContentRange(total int) string {
 	if total == 0 {
-		return fmt.Sprintf("links 0-0/0")
+		return "links 0-0/0"
 	}
 
 	last := p.Offset + p.Limit - 1
