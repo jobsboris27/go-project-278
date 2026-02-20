@@ -1,6 +1,6 @@
-version: "2"
 run:
   timeout: 5m
+
 linters:
   enable:
     - revive
@@ -8,6 +8,5 @@ linters:
     - staticcheck
     - unused
     - govet
-formatters:
-  enable:
-    - gofmt
+  disable:
+    - golint
