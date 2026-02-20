@@ -72,6 +72,58 @@ func TestAPIEndpoints(t *testing.T) {
 			t.Errorf("expected status %d, got %d", http.StatusCreated, w.Code)
 		}
 	})
+
+	t.Run("POST /api/links with invalid JSON returns 400", func(t *testing.T) {
+		body := `invalid json`
+		req := httptest.NewRequest(http.MethodPost, "/api/links", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+		}
+	})
+
+	t.Run("POST /api/links with invalid URL returns 422", func(t *testing.T) {
+		body := `{"original_url": "not-a-url", "short_name": "test"}`
+		req := httptest.NewRequest(http.MethodPost, "/api/links", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Errorf("expected status %d, got %d", http.StatusUnprocessableEntity, w.Code)
+		}
+	})
+
+	t.Run("POST /api/links with empty original_url returns 422", func(t *testing.T) {
+		body := `{"original_url": "", "short_name": "test"}`
+		req := httptest.NewRequest(http.MethodPost, "/api/links", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Errorf("expected status %d, got %d", http.StatusUnprocessableEntity, w.Code)
+		}
+	})
+
+	t.Run("POST /api/links with short short_name returns 422", func(t *testing.T) {
+		body := `{"original_url": "https://example.com", "short_name": "ab"}`
+		req := httptest.NewRequest(http.MethodPost, "/api/links", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Errorf("expected status %d, got %d", http.StatusUnprocessableEntity, w.Code)
+		}
+	})
 }
 
 type mockRepository struct {

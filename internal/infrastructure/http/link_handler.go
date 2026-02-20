@@ -1,14 +1,18 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"app/internal/application/link"
 	linkdomain "app/internal/domain/link"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	"github.com/lib/pq"
 )
 
 type Handler struct {
@@ -40,8 +44,16 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 }
 
 type CreateLinkRequest struct {
-	OriginalURL string `json:"original_url"`
-	ShortName   string `json:"short_name"`
+	OriginalURL string `json:"original_url" binding:"required,url"`
+	ShortName   string `json:"short_name" binding:"omitempty,min=3,max=32"`
+}
+
+type ErrorResponse struct {
+	Errors map[string]string `json:"errors"`
+}
+
+type ErrorSingleResponse struct {
+	Error string `json:"error"`
 }
 
 type LinkResponse struct {
@@ -97,12 +109,27 @@ func (h *Handler) GetAll(c *gin.Context) {
 func (h *Handler) Create(c *gin.Context) {
 	var req CreateLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			c.JSON(http.StatusUnprocessableEntity, validationErrors(ve))
+			return
+		}
+
+		if strings.Contains(err.Error(), "EOF") || strings.Contains(err.Error(), "unexpected end of JSON input") {
+			c.JSON(http.StatusBadRequest, ErrorSingleResponse{Error: "invalid request"})
+			return
+		}
+
+		c.JSON(http.StatusBadRequest, ErrorSingleResponse{Error: "invalid request"})
 		return
 	}
 
 	linkEntity, err := h.service.CreateLink(c.Request.Context(), req.OriginalURL, req.ShortName)
 	if err != nil {
+		if isUniqueViolation(err) {
+			c.JSON(http.StatusUnprocessableEntity, ErrorResponse{Errors: map[string]string{"short_name": "short name already in use"}})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -135,12 +162,27 @@ func (h *Handler) Update(c *gin.Context) {
 
 	var req CreateLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			c.JSON(http.StatusUnprocessableEntity, validationErrors(ve))
+			return
+		}
+
+		if strings.Contains(err.Error(), "EOF") || strings.Contains(err.Error(), "unexpected end of JSON input") {
+			c.JSON(http.StatusBadRequest, ErrorSingleResponse{Error: "invalid request"})
+			return
+		}
+
+		c.JSON(http.StatusBadRequest, ErrorSingleResponse{Error: "invalid request"})
 		return
 	}
 
 	linkEntity, err := h.service.UpdateLink(c.Request.Context(), id, req.OriginalURL, req.ShortName)
 	if err != nil {
+		if isUniqueViolation(err) {
+			c.JSON(http.StatusUnprocessableEntity, ErrorResponse{Errors: map[string]string{"short_name": "short name already in use"}})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -211,4 +253,32 @@ func (h *Handler) GetVisits(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+func validationErrors(ve validator.ValidationErrors) ErrorResponse {
+	errors := make(map[string]string)
+	for _, e := range ve {
+		field := strings.ToLower(e.Field())
+		switch e.Tag() {
+		case "required":
+			errors[field] = "field is required"
+		case "url":
+			errors[field] = "must be a valid URL"
+		case "min":
+			errors[field] = "minimum length is " + e.Param()
+		case "max":
+			errors[field] = "maximum length is " + e.Param()
+		default:
+			errors[field] = e.Error()
+		}
+	}
+	return ErrorResponse{Errors: errors}
+}
+
+func isUniqueViolation(err error) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		return pqErr.Code == "23505"
+	}
+	return false
 }
