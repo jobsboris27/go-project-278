@@ -19,8 +19,13 @@ func NewLinkRepository(db *sql.DB) *LinkRepository {
 }
 
 func (r *LinkRepository) Create(ctx context.Context, linkEntity *link.Link) error {
-	_, err := r.queries.CreateLink(ctx, linkEntity.OriginalURL, linkEntity.ShortName)
-	return err
+	dbLink, err := r.queries.CreateLink(ctx, linkEntity.OriginalURL, linkEntity.ShortName)
+	if err != nil {
+		return err
+	}
+	linkEntity.ID = dbLink.ID
+	linkEntity.CreatedAt = dbLink.CreatedAt
+	return nil
 }
 
 func (r *LinkRepository) GetByID(ctx context.Context, id int64) (*link.Link, error) {
@@ -97,6 +102,10 @@ func (r *LinkRepository) GetVisits(ctx context.Context, offset, limit int) ([]*l
 		visits[i] = toDomainVisit(dbVisit)
 	}
 	return visits, total, nil
+}
+
+func (r *LinkRepository) DeleteVisit(ctx context.Context, id int64) error {
+	return r.queries.DeleteLinkVisit(ctx, id)
 }
 
 func toDomainVisit(dbVisit sqlc.LinkVisit) *link.LinkVisit {

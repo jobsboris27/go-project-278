@@ -2,7 +2,7 @@
 
 run:
 	@echo "Starting server..."
-	@go run cmd/server/main.go
+	@go run main.go
 
 run-local:
 	@echo "Starting server with local .env..."

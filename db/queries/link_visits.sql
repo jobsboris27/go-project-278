@@ -12,6 +12,9 @@ LIMIT $1 OFFSET $2;
 -- name: CountLinkVisits :one
 SELECT COUNT(*) FROM link_visits;
 
+-- name: DeleteLinkVisit :exec
+DELETE FROM link_visits WHERE id = $1;
+
 -- name: GetLinkVisitsByLinkID :many
 SELECT id, link_id, ip, user_agent, referer, status, created_at
 FROM link_visits

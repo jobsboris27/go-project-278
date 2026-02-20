@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 	"time"
 
 	"app/config"
@@ -19,21 +18,19 @@ import (
 	"github.com/pressly/goose/v3"
 )
 
-func router() *gin.Engine {
+func router(cfg *config.Config) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 	r.TrustedPlatform = gin.PlatformCloudflare
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowOrigins:     []string{cfg.UIURL},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
-
-	cfg := config.Load()
 
 	db, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
@@ -64,12 +61,11 @@ func router() *gin.Engine {
 }
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	cfg := config.Load()
 
-	if err := router().Run(":" + port); err != nil {
+	r := router(cfg)
+
+	if err := r.Run(":" + cfg.Port); err != nil {
 		panic(err)
 	}
 }

@@ -204,3 +204,7 @@ func (m *mockRepository) CreateVisit(ctx context.Context, visit *domainLink.Link
 func (m *mockRepository) GetVisits(ctx context.Context, offset, limit int) ([]*domainLink.LinkVisit, int, error) {
 	return []*domainLink.LinkVisit{}, 0, nil
 }
+
+func (m *mockRepository) DeleteVisit(ctx context.Context, id int64) error {
+	return nil
+}

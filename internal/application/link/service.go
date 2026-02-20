@@ -98,3 +98,7 @@ func (s *Service) RecordVisit(ctx context.Context, linkID int64, ip, userAgent, 
 func (s *Service) GetVisits(ctx context.Context, offset, limit int) ([]*link.LinkVisit, int, error) {
 	return s.repo.GetVisits(ctx, offset, limit)
 }
+
+func (s *Service) DeleteVisit(ctx context.Context, id int64) error {
+	return s.repo.DeleteVisit(ctx, id)
+}

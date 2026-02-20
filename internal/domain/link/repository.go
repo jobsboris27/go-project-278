@@ -12,4 +12,5 @@ type Repository interface {
 	ExistsByShortName(ctx context.Context, shortName string) (bool, error)
 	CreateVisit(ctx context.Context, visit *LinkVisit) error
 	GetVisits(ctx context.Context, offset, limit int) ([]*LinkVisit, int, error)
+	DeleteVisit(ctx context.Context, id int64) error
 }

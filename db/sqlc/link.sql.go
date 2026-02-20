@@ -137,3 +137,8 @@ func (q *Queries) CountLinkVisits(ctx context.Context) (int, error) {
 	err := q.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM link_visits").Scan(&total)
 	return total, err
 }
+
+func (q *Queries) DeleteLinkVisit(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, "DELETE FROM link_visits WHERE id = $1", id)
+	return err
+}

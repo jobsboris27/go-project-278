@@ -40,6 +40,7 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 	apiVisits := router.Group("/api")
 	{
 		apiVisits.GET("/link_visits", h.GetVisits)
+		apiVisits.DELETE("/link_visits/:id", h.DeleteVisit)
 	}
 }
 
@@ -253,6 +254,21 @@ func (h *Handler) GetVisits(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+func (h *Handler) DeleteVisit(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	if err := h.service.DeleteVisit(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func validationErrors(ve validator.ValidationErrors) ErrorResponse {
