@@ -96,6 +96,15 @@ func (m *mockRepository) GetByID(ctx context.Context, id int64) (*domainLink.Lin
 	return link, nil
 }
 
+func (m *mockRepository) GetByShortName(ctx context.Context, shortName string) (*domainLink.Link, error) {
+	for _, link := range m.links {
+		if link.ShortName == shortName {
+			return link, nil
+		}
+	}
+	return nil, errors.New("link not found")
+}
+
 func (m *mockRepository) GetAll(ctx context.Context, offset, limit int) ([]*domainLink.Link, int, error) {
 	all := make([]*domainLink.Link, 0, len(m.links))
 	for _, l := range m.links {
@@ -134,4 +143,12 @@ func (m *mockRepository) Delete(ctx context.Context, id int64) error {
 
 func (m *mockRepository) ExistsByShortName(ctx context.Context, shortName string) (bool, error) {
 	return m.shortNameExists[shortName], nil
+}
+
+func (m *mockRepository) CreateVisit(ctx context.Context, visit *domainLink.LinkVisit) error {
+	return nil
+}
+
+func (m *mockRepository) GetVisits(ctx context.Context, offset, limit int) ([]*domainLink.LinkVisit, int, error) {
+	return []*domainLink.LinkVisit{}, 0, nil
 }

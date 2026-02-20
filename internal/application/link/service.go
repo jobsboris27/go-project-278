@@ -44,6 +44,10 @@ func (s *Service) GetLink(ctx context.Context, id int64) (*link.Link, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
+func (s *Service) GetLinkByShortName(ctx context.Context, shortName string) (*link.Link, error) {
+	return s.repo.GetByShortName(ctx, shortName)
+}
+
 func (s *Service) GetAllLinks(ctx context.Context, offset, limit int) ([]*link.Link, int, error) {
 	return s.repo.GetAll(ctx, offset, limit)
 }
@@ -84,4 +88,13 @@ func (s *Service) DeleteLink(ctx context.Context, id int64) error {
 
 func (s *Service) GetShortURL(linkEntity *link.Link) string {
 	return fmt.Sprintf("%s/r/%s", s.baseURL, linkEntity.ShortName)
+}
+
+func (s *Service) RecordVisit(ctx context.Context, linkID int64, ip, userAgent, referer string, status int) error {
+	visit := link.NewLinkVisit(linkID, ip, userAgent, referer, status)
+	return s.repo.CreateVisit(ctx, visit)
+}
+
+func (s *Service) GetVisits(ctx context.Context, offset, limit int) ([]*link.LinkVisit, int, error) {
+	return s.repo.GetVisits(ctx, offset, limit)
 }

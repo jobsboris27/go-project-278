@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"app/internal/application/link"
 	linkdomain "app/internal/domain/link"
@@ -21,6 +22,8 @@ func NewHandler(service *link.Service) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(router *gin.Engine) {
+	router.GET("/r/:code", h.Redirect)
+
 	api := router.Group("/api/links")
 	{
 		api.GET("", h.GetAll)
@@ -28,6 +31,11 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		api.GET("/:id", h.GetByID)
 		api.PUT("/:id", h.Update)
 		api.DELETE("/:id", h.Delete)
+	}
+
+	apiVisits := router.Group("/api")
+	{
+		apiVisits.GET("/link_visits", h.GetVisits)
 	}
 }
 
@@ -41,6 +49,16 @@ type LinkResponse struct {
 	OriginalURL string `json:"original_url"`
 	ShortName   string `json:"short_name"`
 	ShortURL    string `json:"short_url"`
+}
+
+type VisitResponse struct {
+	ID        int64  `json:"id"`
+	LinkID    int64  `json:"link_id"`
+	CreatedAt string `json:"created_at"`
+	IP        string `json:"ip"`
+	UserAgent string `json:"user_agent"`
+	Referer   string `json:"referer"`
+	Status    int    `json:"status"`
 }
 
 func toLinkResponse(l *linkdomain.Link, service *link.Service) LinkResponse {
@@ -143,4 +161,54 @@ func (h *Handler) Delete(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func (h *Handler) Redirect(c *gin.Context) {
+	code := c.Param("code")
+
+	linkEntity, err := h.service.GetLinkByShortName(c.Request.Context(), code)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "link not found"})
+		return
+	}
+
+	ip := c.ClientIP()
+	userAgent := c.GetHeader("User-Agent")
+	referer := c.GetHeader("Referer")
+
+	_ = h.service.RecordVisit(c.Request.Context(), linkEntity.ID, ip, userAgent, referer, http.StatusFound)
+
+	c.Redirect(http.StatusFound, linkEntity.OriginalURL)
+}
+
+func (h *Handler) GetVisits(c *gin.Context) {
+	rangeStr := c.Query("range")
+	pagination, err := linkdomain.ParseRange(rangeStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid range format"})
+		return
+	}
+
+	visits, total, err := h.service.GetVisits(c.Request.Context(), pagination.Offset, pagination.Limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Header("Content-Range", pagination.ContentRange(total))
+
+	response := make([]VisitResponse, len(visits))
+	for i, v := range visits {
+		response[i] = VisitResponse{
+			ID:        v.ID,
+			LinkID:    v.LinkID,
+			CreatedAt: v.CreatedAt.Format(time.RFC3339),
+			IP:        v.IP,
+			UserAgent: v.UserAgent,
+			Referer:   v.Referer,
+			Status:    v.Status,
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
 }

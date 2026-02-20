@@ -31,6 +31,14 @@ func (r *LinkRepository) GetByID(ctx context.Context, id int64) (*link.Link, err
 	return toDomainLink(dbLink), nil
 }
 
+func (r *LinkRepository) GetByShortName(ctx context.Context, shortName string) (*link.Link, error) {
+	dbLink, err := r.queries.GetLinkByShortName(ctx, shortName)
+	if err != nil {
+		return nil, err
+	}
+	return toDomainLink(dbLink), nil
+}
+
 func (r *LinkRepository) GetAll(ctx context.Context, offset, limit int) ([]*link.Link, int, error) {
 	total, err := r.count(ctx)
 	if err != nil {
@@ -66,6 +74,41 @@ func (r *LinkRepository) Delete(ctx context.Context, id int64) error {
 
 func (r *LinkRepository) ExistsByShortName(ctx context.Context, shortName string) (bool, error) {
 	return r.queries.ExistsByShortName(ctx, shortName)
+}
+
+func (r *LinkRepository) CreateVisit(ctx context.Context, visit *link.LinkVisit) error {
+	_, err := r.queries.CreateLinkVisit(ctx, visit.LinkID, visit.IP, visit.UserAgent, visit.Referer, visit.Status)
+	return err
+}
+
+func (r *LinkRepository) GetVisits(ctx context.Context, offset, limit int) ([]*link.LinkVisit, int, error) {
+	total, err := r.queries.CountLinkVisits(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	dbVisits, err := r.queries.GetLinkVisits(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	visits := make([]*link.LinkVisit, len(dbVisits))
+	for i, dbVisit := range dbVisits {
+		visits[i] = toDomainVisit(dbVisit)
+	}
+	return visits, total, nil
+}
+
+func toDomainVisit(dbVisit sqlc.LinkVisit) *link.LinkVisit {
+	return &link.LinkVisit{
+		ID:        dbVisit.ID,
+		LinkID:    dbVisit.LinkID,
+		IP:        dbVisit.IP,
+		UserAgent: dbVisit.UserAgent,
+		Referer:   dbVisit.Referer,
+		Status:    dbVisit.Status,
+		CreatedAt: dbVisit.CreatedAt,
+	}
 }
 
 func toDomainLink(dbLink sqlc.Link) *link.Link {
