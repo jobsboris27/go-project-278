@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"app/internal/application/link"
 	linkdomain "app/internal/domain/link"
+	"app/internal/shared/validator"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
+	govalidator "github.com/go-playground/validator/v10"
 	"github.com/lib/pq"
 )
 
@@ -102,9 +102,10 @@ func (h *Handler) GetAll(c *gin.Context) {
 func (h *Handler) Create(c *gin.Context) {
 	var req CreateLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		var ve validator.ValidationErrors
+		var ve govalidator.ValidationErrors
 		if errors.As(err, &ve) {
-			c.JSON(http.StatusUnprocessableEntity, validationErrors(ve))
+			resp := validator.FormatValidationErrors(ve)
+			c.JSON(http.StatusUnprocessableEntity, resp)
 			return
 		}
 
@@ -155,9 +156,10 @@ func (h *Handler) Update(c *gin.Context) {
 
 	var req CreateLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		var ve validator.ValidationErrors
+		var ve govalidator.ValidationErrors
 		if errors.As(err, &ve) {
-			c.JSON(http.StatusUnprocessableEntity, validationErrors(ve))
+			resp := validator.FormatValidationErrors(ve)
+			c.JSON(http.StatusUnprocessableEntity, resp)
 			return
 		}
 
@@ -270,48 +272,6 @@ func (h *Handler) DeleteVisit(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
-}
-
-func validationErrors(ve validator.ValidationErrors) ErrorResponse {
-	errorsMap := make(map[string]string)
-
-	for _, e := range ve {
-		field := e.Field()
-		snake := toSnakeCase(field)
-
-		switch e.Tag() {
-		case "required":
-			errorsMap[snake] = "field is required"
-		case "url":
-			errorsMap[snake] = "must be a valid URL"
-		case "min":
-			errorsMap[snake] = "minimum length is " + e.Param()
-		case "max":
-			errorsMap[snake] = "maximum length is " + e.Param()
-		default:
-			errorsMap[snake] = "invalid value"
-		}
-	}
-
-	return ErrorResponse{Errors: errorsMap}
-}
-
-func toSnakeCase(s string) string {
-	var b strings.Builder
-	runes := []rune(s)
-
-	for i, r := range runes {
-		if unicode.IsUpper(r) {
-			if i > 0 && unicode.IsLower(runes[i-1]) {
-				b.WriteByte('_')
-			}
-			b.WriteRune(unicode.ToLower(r))
-		} else {
-			b.WriteRune(r)
-		}
-	}
-
-	return b.String()
 }
 
 func isUniqueViolation(err error) bool {
