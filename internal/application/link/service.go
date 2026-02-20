@@ -44,8 +44,8 @@ func (s *Service) GetLink(ctx context.Context, id int64) (*link.Link, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *Service) GetAllLinks(ctx context.Context) ([]*link.Link, error) {
-	return s.repo.GetAll(ctx)
+func (s *Service) GetAllLinks(ctx context.Context, offset, limit int) ([]*link.Link, int, error) {
+	return s.repo.GetAll(ctx, offset, limit)
 }
 
 func (s *Service) UpdateLink(ctx context.Context, id int64, originalURL, shortName string) (*link.Link, error) {

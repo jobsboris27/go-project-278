@@ -31,16 +31,28 @@ func (r *LinkRepository) GetByID(ctx context.Context, id int64) (*link.Link, err
 	return toDomainLink(dbLink), nil
 }
 
-func (r *LinkRepository) GetAll(ctx context.Context) ([]*link.Link, error) {
-	dbLinks, err := r.queries.GetAllLinks(ctx)
+func (r *LinkRepository) GetAll(ctx context.Context, offset, limit int) ([]*link.Link, int, error) {
+	total, err := r.count(ctx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
+
+	dbLinks, err := r.queries.GetAllLinks(ctx, offset, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	links := make([]*link.Link, len(dbLinks))
 	for i, dbLink := range dbLinks {
 		links[i] = toDomainLink(dbLink)
 	}
-	return links, nil
+	return links, total, nil
+}
+
+func (r *LinkRepository) count(ctx context.Context) (int, error) {
+	var total int
+	err := r.queries.DB().QueryRowContext(ctx, "SELECT COUNT(*) FROM links").Scan(&total)
+	return total, err
 }
 
 func (r *LinkRepository) Update(ctx context.Context, linkEntity *link.Link) error {

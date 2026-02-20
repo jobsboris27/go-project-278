@@ -21,6 +21,10 @@ func New(db *sql.DB) *Queries {
 	return &Queries{db: db}
 }
 
+func (q *Queries) DB() *sql.DB {
+	return q.db
+}
+
 func (q *Queries) CreateLink(ctx context.Context, originalURL, shortName string) (Link, error) {
 	var link Link
 	err := q.db.QueryRowContext(ctx,
@@ -37,9 +41,10 @@ func (q *Queries) GetLinkByID(ctx context.Context, id int64) (Link, error) {
 	return link, err
 }
 
-func (q *Queries) GetAllLinks(ctx context.Context) ([]Link, error) {
+func (q *Queries) GetAllLinks(ctx context.Context, offset, limit int) ([]Link, error) {
 	rows, err := q.db.QueryContext(ctx,
-		"SELECT id, original_url, short_name, created_at FROM links ORDER BY id")
+		"SELECT id, original_url, short_name, created_at FROM links ORDER BY id LIMIT $1 OFFSET $2",
+		limit, offset)
 	if err != nil {
 		return nil, err
 	}

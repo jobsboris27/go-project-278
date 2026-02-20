@@ -96,12 +96,24 @@ func (m *mockRepository) GetByID(ctx context.Context, id int64) (*domainLink.Lin
 	return link, nil
 }
 
-func (m *mockRepository) GetAll(ctx context.Context) ([]*domainLink.Link, error) {
-	links := make([]*domainLink.Link, 0, len(m.links))
+func (m *mockRepository) GetAll(ctx context.Context, offset, limit int) ([]*domainLink.Link, int, error) {
+	all := make([]*domainLink.Link, 0, len(m.links))
 	for _, l := range m.links {
-		links = append(links, l)
+		all = append(all, l)
 	}
-	return links, nil
+
+	total := len(all)
+
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+
+	if offset >= total {
+		return []*domainLink.Link{}, total, nil
+	}
+
+	return all[offset:end], total, nil
 }
 
 func (m *mockRepository) Update(ctx context.Context, link *domainLink.Link) error {

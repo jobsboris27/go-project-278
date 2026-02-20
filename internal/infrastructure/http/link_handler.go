@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"app/internal/application/link"
-	domainLink "app/internal/domain/link"
+	linkdomain "app/internal/domain/link"
 
 	"github.com/gin-gonic/gin"
 )
@@ -43,7 +43,7 @@ type LinkResponse struct {
 	ShortURL    string `json:"short_url"`
 }
 
-func toLinkResponse(l *domainLink.Link, service *link.Service) LinkResponse {
+func toLinkResponse(l *linkdomain.Link, service *link.Service) LinkResponse {
 	return LinkResponse{
 		ID:          l.ID,
 		OriginalURL: l.OriginalURL,
@@ -53,11 +53,20 @@ func toLinkResponse(l *domainLink.Link, service *link.Service) LinkResponse {
 }
 
 func (h *Handler) GetAll(c *gin.Context) {
-	links, err := h.service.GetAllLinks(c.Request.Context())
+	rangeStr := c.Query("range")
+	pagination, err := linkdomain.ParseRange(rangeStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid range format"})
+		return
+	}
+
+	links, total, err := h.service.GetAllLinks(c.Request.Context(), pagination.Offset, pagination.Limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	c.Header("Content-Range", pagination.ContentRange(total))
 
 	response := make([]LinkResponse, len(links))
 	for i, l := range links {
