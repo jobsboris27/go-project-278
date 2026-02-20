@@ -54,6 +54,11 @@ func (s *Service) GetAllLinks(ctx context.Context, offset, limit int) ([]*link.L
 }
 
 func (s *Service) UpdateLink(ctx context.Context, id int64, originalURL, shortName string) (*link.Link, error) {
+	_, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, errors.New("link not found")
+	}
+
 	if originalURL == "" {
 		existing, err := s.repo.GetByID(ctx, id)
 		if err != nil {
