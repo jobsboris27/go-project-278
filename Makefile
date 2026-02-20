@@ -1,7 +1,12 @@
 .PHONY: run test lint migrate-up migrate-down sqlc-generate
 
 run:
-	go run cmd/server/main.go
+	@echo "Starting server..."
+	@go run cmd/server/main.go
+
+run-local:
+	@echo "Starting server with local .env..."
+	@set -a && source .env 2>/dev/null || true && set +a && go run cmd/server/main.go
 
 test:
 	go test -v -race ./...
