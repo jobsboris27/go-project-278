@@ -172,7 +172,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 	linkEntity, err := h.service.UpdateLink(c.Request.Context(), id, req.OriginalURL, req.ShortName)
 	if err != nil {
-		if err.Error() == "link not found" {
+		if strings.Contains(err.Error(), "link not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "link not found"})
 			return
 		}
@@ -277,17 +277,7 @@ func validationErrors(ve validator.ValidationErrors) ErrorResponse {
 
 	for _, e := range ve {
 		field := e.Field()
-		snake := ""
-		for i, r := range field {
-			if unicode.IsUpper(r) {
-				if i > 0 {
-					snake += "_"
-				}
-				snake += strings.ToLower(string(r))
-			} else {
-				snake += string(r)
-			}
-		}
+		snake := toSnakeCase(field)
 
 		switch e.Tag() {
 		case "required":
@@ -304,6 +294,24 @@ func validationErrors(ve validator.ValidationErrors) ErrorResponse {
 	}
 
 	return ErrorResponse{Errors: errorsMap}
+}
+
+func toSnakeCase(s string) string {
+	var b strings.Builder
+	runes := []rune(s)
+
+	for i, r := range runes {
+		if unicode.IsUpper(r) {
+			if i > 0 && unicode.IsLower(runes[i-1]) {
+				b.WriteByte('_')
+			}
+			b.WriteRune(unicode.ToLower(r))
+		} else {
+			b.WriteRune(r)
+		}
+	}
+
+	return b.String()
 }
 
 func isUniqueViolation(err error) bool {
