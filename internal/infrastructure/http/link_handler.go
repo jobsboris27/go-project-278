@@ -74,15 +74,6 @@ type VisitResponse struct {
 	Status    int    `json:"status"`
 }
 
-func toLinkResponse(l *linkdomain.Link, service *link.Service) LinkResponse {
-	return LinkResponse{
-		ID:          l.ID,
-		OriginalURL: l.OriginalURL,
-		ShortName:   l.ShortName,
-		ShortURL:    service.GetShortURL(l),
-	}
-}
-
 func (h *Handler) GetAll(c *gin.Context) {
 	rangeStr := c.Query("range")
 	pagination, err := linkdomain.ParseRange(rangeStr)
@@ -180,6 +171,10 @@ func (h *Handler) Update(c *gin.Context) {
 
 	linkEntity, err := h.service.UpdateLink(c.Request.Context(), id, req.OriginalURL, req.ShortName)
 	if err != nil {
+		if errors.Is(err, errors.New("link not found")) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "link not found"})
+			return
+		}
 		if isUniqueViolation(err) {
 			c.JSON(http.StatusUnprocessableEntity, ErrorResponse{Errors: map[string]string{"short_name": "short name already in use"}})
 			return
@@ -198,7 +193,12 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteLink(c.Request.Context(), id); err != nil {
+	err = h.service.DeleteLink(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, errors.New("link not found")) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "link not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -272,23 +272,26 @@ func (h *Handler) DeleteVisit(c *gin.Context) {
 }
 
 func validationErrors(ve validator.ValidationErrors) ErrorResponse {
-	errors := make(map[string]string)
+	errorsMap := make(map[string]string)
+
 	for _, e := range ve {
-		field := strings.ToLower(e.Field())
+		field := e.Field()
+
 		switch e.Tag() {
 		case "required":
-			errors[field] = "field is required"
+			errorsMap[field] = "field is required"
 		case "url":
-			errors[field] = "must be a valid URL"
+			errorsMap[field] = "must be a valid URL"
 		case "min":
-			errors[field] = "minimum length is " + e.Param()
+			errorsMap[field] = "minimum length is " + e.Param()
 		case "max":
-			errors[field] = "maximum length is " + e.Param()
+			errorsMap[field] = "maximum length is " + e.Param()
 		default:
-			errors[field] = e.Error()
+			errorsMap[field] = "invalid value"
 		}
 	}
-	return ErrorResponse{Errors: errors}
+
+	return ErrorResponse{Errors: errorsMap}
 }
 
 func isUniqueViolation(err error) bool {
@@ -297,4 +300,13 @@ func isUniqueViolation(err error) bool {
 		return pqErr.Code == "23505"
 	}
 	return false
+}
+
+func toLinkResponse(l *linkdomain.Link, service *link.Service) LinkResponse {
+	return LinkResponse{
+		ID:          l.ID,
+		OriginalURL: l.OriginalURL,
+		ShortName:   l.ShortName,
+		ShortURL:    service.GetShortURL(l),
+	}
 }

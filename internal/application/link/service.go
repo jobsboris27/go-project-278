@@ -2,6 +2,7 @@ package link
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"app/internal/domain/link"
@@ -56,7 +57,7 @@ func (s *Service) UpdateLink(ctx context.Context, id int64, originalURL, shortNa
 	if originalURL == "" {
 		existing, err := s.repo.GetByID(ctx, id)
 		if err != nil {
-			return nil, err
+			return nil, errors.New("link not found")
 		}
 		originalURL = existing.OriginalURL
 	}
@@ -64,7 +65,7 @@ func (s *Service) UpdateLink(ctx context.Context, id int64, originalURL, shortNa
 	if shortName == "" {
 		existing, err := s.repo.GetByID(ctx, id)
 		if err != nil {
-			return nil, err
+			return nil, errors.New("link not found")
 		}
 		shortName = existing.ShortName
 	}
@@ -83,6 +84,10 @@ func (s *Service) UpdateLink(ctx context.Context, id int64, originalURL, shortNa
 }
 
 func (s *Service) DeleteLink(ctx context.Context, id int64) error {
+	_, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return errors.New("link not found")
+	}
 	return s.repo.Delete(ctx, id)
 }
 
