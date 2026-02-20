@@ -2,11 +2,15 @@ package main
 
 import "github.com/gin-gonic/gin"
 
-func main() {
-	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
-	router.GET("/ping", func(c *gin.Context) {
+func router() *gin.Engine {
+	r := gin.New()
+	r.Use(gin.Logger(), gin.Recovery())
+	r.GET("/ping", func(c *gin.Context) {
 		c.String(200, "pong")
 	})
-	router.Run(":8080")
+	return r
+}
+
+func main() {
+	router().Run(":8080")
 }

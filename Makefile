@@ -1,17 +1,10 @@
-build:
-	go build -o bin/gendiff ./cmd/gendiff
+.PHONY: run test lint
 
-run: build
-	bin/gendiff
-
-.PHONY: build run
+run:
+	go run main.go
 
 test:
-	go mod tidy
-	go test -v -coverprofile=coverage.out ./...
-
-install:
-	go install ./cmd/gendiff
+	go test -v -race ./...
 
 lint:
-	golangci-lint run ./...
+	golangci-lint run
