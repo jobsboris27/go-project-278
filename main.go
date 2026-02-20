@@ -1,3 +1,4 @@
+// Package main provides the main entry point for the application.
 package main
 
 import (
@@ -25,7 +26,7 @@ func router() *gin.Engine {
 		c.String(200, "pong")
 	})
 
-	r.GET("/panic", func(c *gin.Context) {
+	r.GET("/panic", func(_ *gin.Context) {
 		panic("test error for Sentry")
 	})
 	return r
@@ -37,5 +38,7 @@ func main() {
 		port = "8080"
 	}
 
-	router().Run(":" + port)
+	if err := router().Run(":" + port); err != nil {
+		panic(err)
+	}
 }
