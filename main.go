@@ -32,5 +32,10 @@ func router() *gin.Engine {
 }
 
 func main() {
-	router().Run(":" + os.Getenv("PORT"))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	router().Run(":" + port)
 }
