@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"app/internal/application/link"
 	linkdomain "app/internal/domain/link"
@@ -171,7 +172,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 	linkEntity, err := h.service.UpdateLink(c.Request.Context(), id, req.OriginalURL, req.ShortName)
 	if err != nil {
-		if errors.Is(err, errors.New("link not found")) {
+		if err.Error() == "link not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": "link not found"})
 			return
 		}
@@ -195,7 +196,7 @@ func (h *Handler) Delete(c *gin.Context) {
 
 	err = h.service.DeleteLink(c.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, errors.New("link not found")) {
+		if err.Error() == "link not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": "link not found"})
 			return
 		}
@@ -276,18 +277,29 @@ func validationErrors(ve validator.ValidationErrors) ErrorResponse {
 
 	for _, e := range ve {
 		field := e.Field()
+		snake := ""
+		for i, r := range field {
+			if unicode.IsUpper(r) {
+				if i > 0 {
+					snake += "_"
+				}
+				snake += strings.ToLower(string(r))
+			} else {
+				snake += string(r)
+			}
+		}
 
 		switch e.Tag() {
 		case "required":
-			errorsMap[field] = "field is required"
+			errorsMap[snake] = "field is required"
 		case "url":
-			errorsMap[field] = "must be a valid URL"
+			errorsMap[snake] = "must be a valid URL"
 		case "min":
-			errorsMap[field] = "minimum length is " + e.Param()
+			errorsMap[snake] = "minimum length is " + e.Param()
 		case "max":
-			errorsMap[field] = "maximum length is " + e.Param()
+			errorsMap[snake] = "maximum length is " + e.Param()
 		default:
-			errorsMap[field] = "invalid value"
+			errorsMap[snake] = "invalid value"
 		}
 	}
 

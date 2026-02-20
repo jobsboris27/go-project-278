@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"app/db/sqlc"
 	"app/internal/domain/link"
@@ -31,6 +32,9 @@ func (r *LinkRepository) Create(ctx context.Context, linkEntity *link.Link) erro
 func (r *LinkRepository) GetByID(ctx context.Context, id int64) (*link.Link, error) {
 	dbLink, err := r.queries.GetLinkByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("link not found")
+		}
 		return nil, err
 	}
 	return toDomainLink(dbLink), nil
