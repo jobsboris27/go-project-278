@@ -5,4 +5,4 @@
 ![CI](https://github.com/jobsboris27/go-project-278/workflows/CI/badge.svg)
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
-Демо: https://go-project-278-881v.onrender.com
+Демо: https://go-project-278-1-gf2k.onrender.com/
