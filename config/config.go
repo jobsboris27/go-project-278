@@ -21,13 +21,9 @@ func Load() *Config {
 
 	config := &Config{
 		DatabaseURL: os.Getenv("DATABASE_URL"),
-		Port:        os.Getenv("PORT"),
+		Port:        "8080",
 		BaseURL:     os.Getenv("BASE_URL"),
 		UIURL:       os.Getenv("UI_URL"),
-	}
-
-	if config.Port == "" {
-		config.Port = "8080"
 	}
 
 	if config.BaseURL == "" {
