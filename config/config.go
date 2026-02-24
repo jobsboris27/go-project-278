@@ -8,10 +8,11 @@ import (
 )
 
 type Config struct {
-	DatabaseURL string
-	Port        string
-	BaseURL     string
-	UIURL       string
+	DatabaseURL  string
+	Port         string
+	BaseURL      string
+	UIURL        string
+	RollbarToken string
 }
 
 func Load() *Config {
@@ -20,10 +21,11 @@ func Load() *Config {
 	}
 
 	config := &Config{
-		DatabaseURL: os.Getenv("DATABASE_URL"),
-		Port:        "8080",
-		BaseURL:     os.Getenv("BASE_URL"),
-		UIURL:       os.Getenv("UI_URL"),
+		DatabaseURL:  os.Getenv("DATABASE_URL"),
+		Port:         os.Getenv("API_PORT"),
+		BaseURL:      os.Getenv("BASE_URL"),
+		UIURL:        os.Getenv("UI_URL"),
+		RollbarToken: os.Getenv("ROLLBAR_TOKEN"),
 	}
 
 	if config.BaseURL == "" {

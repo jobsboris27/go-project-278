@@ -16,7 +16,14 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
+
+	"github.com/rollbar/rollbar-go"
 )
+
+func doSomething() {
+	var timer *time.Timer = nil
+	timer.Reset(10) // this will panic
+}
 
 func router(cfg *config.Config) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
@@ -61,7 +68,14 @@ func router(cfg *config.Config) *gin.Engine {
 }
 
 func main() {
+	rollbar.Close()
 	cfg := config.Load()
+
+	rollbar.SetToken(cfg.RollbarToken)
+	rollbar.SetEnvironment("production") // defaults to "development"
+
+	rollbar.Info("Message body goes here")
+	rollbar.WrapAndWait(doSomething)
 
 	r := router(cfg)
 
