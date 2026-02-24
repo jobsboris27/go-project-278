@@ -7,6 +7,11 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const (
+	defaultPort  = "8080"
+	defaultUIURL = "http://localhost:5173"
+)
+
 type Config struct {
 	DatabaseURL  string
 	Port         string
@@ -28,12 +33,16 @@ func Load() *Config {
 		RollbarToken: os.Getenv("ROLLBAR_TOKEN"),
 	}
 
+	if config.Port == "" {
+		config.Port = defaultPort
+	}
+
 	if config.BaseURL == "" {
 		config.BaseURL = "http://localhost:" + config.Port
 	}
 
 	if config.UIURL == "" {
-		config.UIURL = "http://localhost:5173"
+		config.UIURL = defaultUIURL
 	}
 
 	return config
