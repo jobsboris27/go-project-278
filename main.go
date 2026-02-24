@@ -19,11 +19,6 @@ import (
 	"github.com/rollbar/rollbar-go"
 )
 
-func doSomething() {
-	var timer *time.Timer = nil
-	timer.Reset(10) // this will panic
-}
-
 func connectDB(databaseURL string) (*sql.DB, error) {
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
@@ -80,7 +75,6 @@ func main() {
 	defer rollbar.Close()
 
 	rollbar.Info("Application starting")
-	rollbar.WrapAndWait(doSomething)
 
 	var service *link.Service
 
