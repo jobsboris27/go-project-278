@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"log"
+	"os"
 	"time"
 
 	"app/config"
@@ -9,13 +11,10 @@ import (
 	"app/internal/infrastructure/http"
 	"app/internal/infrastructure/persistence/postgres"
 
-	"database/sql"
-
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	_ "github.com/lib/pq"
-	"github.com/pressly/goose/v3"
 
 	"github.com/rollbar/rollbar-go"
 )
@@ -23,6 +22,38 @@ import (
 func doSomething() {
 	var timer *time.Timer = nil
 	timer.Reset(10) // this will panic
+}
+
+func connectDB(databaseURL string) (*sql.DB, error) {
+	db, err := sql.Open("postgres", databaseURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := db.Ping(); err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
+func createDependencies(db *sql.DB, baseURL string) *link.Service {
+	repo := postgres.NewLinkRepository(db)
+	return link.NewService(repo, baseURL)
+}
+
+func initRollbar(token string) {
+	rollbar.SetToken(token)
+	rollbar.SetEnvironment("production")
+}
+
+func registerRoutes(r *gin.Engine, service *link.Service) {
+	handler := http.NewHandler(service)
+	handler.RegisterRoutes(r)
+
+	r.GET("/ping", func(c *gin.Context) {
+		c.String(200, "pong")
+	})
 }
 
 func router(cfg *config.Config) *gin.Engine {
@@ -39,47 +70,32 @@ func router(cfg *config.Config) *gin.Engine {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	db, err := sql.Open("postgres", cfg.DatabaseURL)
-	if err != nil {
-		log.Printf("warning: failed to open database: %v", err)
-		return r
-	}
-
-	if err := db.Ping(); err != nil {
-		log.Printf("warning: failed to ping database: %v", err)
-		return r
-	}
-
-	if err := goose.Up(db, "db/migrations"); err != nil {
-		log.Printf("warning: failed to run migrations: %v", err)
-	}
-
-	repo := postgres.NewLinkRepository(db)
-	service := link.NewService(repo, cfg.BaseURL)
-
-	handler := http.NewHandler(service)
-	handler.RegisterRoutes(r)
-
-	r.GET("/ping", func(c *gin.Context) {
-		c.String(200, "pong")
-	})
-
 	return r
 }
 
 func main() {
-	rollbar.Close()
 	cfg := config.Load()
 
-	rollbar.SetToken(cfg.RollbarToken)
-	rollbar.SetEnvironment("production") // defaults to "development"
+	initRollbar(cfg.RollbarToken)
+	defer rollbar.Close()
 
-	rollbar.Info("Message body goes here")
+	rollbar.Info("Application starting")
 	rollbar.WrapAndWait(doSomething)
 
+	db, err := connectDB(cfg.DatabaseURL)
+	if err != nil {
+		log.Printf("error: failed to connect to database: %v", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	service := createDependencies(db, cfg.BaseURL)
+
 	r := router(cfg)
+	registerRoutes(r, service)
 
 	if err := r.Run(":" + cfg.Port); err != nil {
-		panic(err)
+		log.Printf("error: failed to start server: %v", err)
+		os.Exit(1)
 	}
 }
