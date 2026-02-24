@@ -82,18 +82,20 @@ func main() {
 	rollbar.Info("Application starting")
 	rollbar.WrapAndWait(doSomething)
 
+	var service *link.Service
+
 	db, err := connectDB(cfg.DatabaseURL)
 	if err != nil {
-		log.Printf("error: failed to connect to database: %v", err)
-		os.Exit(1)
+		log.Printf("warning: failed to connect to database: %v", err)
+		log.Printf("warning: running without database connection")
+	} else {
+		defer func() {
+			if err := db.Close(); err != nil {
+				log.Printf("error: failed to close database: %v", err)
+			}
+		}()
+		service = createDependencies(db, cfg.BaseURL)
 	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			log.Printf("error: failed to close database: %v", err)
-		}
-	}()
-
-	service := createDependencies(db, cfg.BaseURL)
 
 	r := router(cfg)
 	registerRoutes(r, service)
