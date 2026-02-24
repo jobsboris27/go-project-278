@@ -87,7 +87,11 @@ func main() {
 		log.Printf("error: failed to connect to database: %v", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("error: failed to close database: %v", err)
+		}
+	}()
 
 	service := createDependencies(db, cfg.BaseURL)
 
